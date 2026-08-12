@@ -1,11 +1,16 @@
 {
   "version": 2,
   "builds": [
-    { "src": "frontend/index.html", "use": "@vercel/static" },
+    { "src": "frontend/**", "use": "@vercel/static" },
     { "src": "api/[...path].js", "use": "@vercel/node" }
   ],
   "routes": [
     { "src": "/api/(.*)", "dest": "api/[...path].js" },
+    { "src": "/manifest.webmanifest", "dest": "frontend/manifest.webmanifest" },
+    { "src": "/sw.js", "dest": "frontend/sw.js" },
+    { "src": "/registerSW.js", "dest": "frontend/registerSW.js" },
+    { "src": "/favicon.svg", "dest": "frontend/favicon.svg" },
+    { "src": "/icons/(.*)", "dest": "frontend/icons/$1" },
     { "src": "/(.*)", "dest": "frontend/index.html" }
   ]
 }

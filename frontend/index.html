@@ -4,6 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sistema de Distribuidora</title>
+
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#161b22">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Stockeador">
+<script defer src="/registerSW.js"></script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
@@ -82,10 +93,14 @@
     display:flex;
     flex-direction:column;
     flex-shrink:0;
-    position:sticky;
+    position:fixed;
     top:0;
+    left:0;
     height:100vh;
+    overflow-y:auto;
+    z-index:70;
   }
+  main{margin-left:220px;}
   .brand{
     padding:22px 20px 18px;
     border-bottom:1px solid rgba(255,255,255,.08);
@@ -183,12 +198,14 @@
   table{width:100%;border-collapse:collapse;font-size:13px;}
   th{
     text-align:left;color:var(--ink-soft);font-weight:600;font-size:11px;
-    text-transform:uppercase;letter-spacing:.4px;padding:8px 10px;
-    border-bottom:1px solid var(--line);
+    text-transform:uppercase;letter-spacing:.4px;padding:11px 12px;
+    border-bottom:2px solid var(--line);background:#fafbfc;
   }
-  td{padding:10px;border-bottom:1px solid var(--line);}
+  td{padding:12px;border-bottom:1px solid var(--line);}
   tr:last-child td{border-bottom:none;}
   tbody tr:hover{background:#fafbfc;}
+  tbody tr:nth-child(even){background:#fbfbfc;}
+  tbody tr:nth-child(even):hover{background:#f4f5f7;}
   .num{font-family:'JetBrains Mono',monospace;text-align:right;}
   .tag{
     display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;
@@ -197,6 +214,16 @@
   .tag.warn{background:var(--amber-soft);color:var(--amber);}
   .tag.bad{background:var(--red-soft);color:var(--red);}
   .empty{padding:30px;text-align:center;color:var(--ink-soft);font-size:13px;}
+
+  .stock-pill{
+    display:inline-block;min-width:26px;padding:2px 9px;border-radius:20px;font-weight:700;
+  }
+  .stock-pill.stock-critico{background:var(--red-soft);color:var(--red);}
+  .stock-pill.stock-alerta{background:var(--amber-soft);color:var(--amber);}
+  tr.stock-critico{background:var(--red-soft);}
+  tr.stock-critico:hover{background:#f7ddd8;}
+  tr.stock-alerta{background:var(--amber-soft);}
+  tr.stock-alerta:hover{background:#f6e8cf;}
 
   input,select,textarea{
     font-family:inherit;font-size:13px;padding:8px 10px;
@@ -372,7 +399,7 @@
     }
     .sidebar-backdrop.show{display:block;}
 
-    main{padding:18px 14px 50px;min-width:0;}
+    main{padding:18px 14px 50px;min-width:0;margin-left:0;}
     .topbar{align-items:flex-start;}
     h1{font-size:19px;}
 
@@ -2258,7 +2285,10 @@ async function renderDashboard(){
     : `<tr><td colspan="4" class="empty">Sin ventas registradas todavía.</td></tr>`;
 
   const tbs = document.getElementById('tbl-dash-stock');
-  tbs.innerHTML = d.stockBajo.length ? d.stockBajo.map(p=>`<tr><td>${p.nombre}</td><td class="num">${p.stock}</td><td class="num">${p.stock_min}</td></tr>`).join('')
+  tbs.innerHTML = d.stockBajo.length ? d.stockBajo.map(p=>{
+      const nivel = Number(p.stock)<=0 ? 'critico' : 'alerta';
+      return `<tr class="stock-${nivel}"><td>${p.nombre}</td><td class="num"><span class="stock-pill stock-${nivel}">${p.stock}</span></td><td class="num">${p.stock_min}</td></tr>`;
+    }).join('')
     : `<tr><td colspan="3" class="empty">Todo el stock está en niveles saludables.</td></tr>`;
 }
 
