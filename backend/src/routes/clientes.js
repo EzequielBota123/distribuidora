@@ -134,6 +134,28 @@ router.post('/:id/pagos', async (req, res) => {
   res.status(201).json(data);
 });
 
+router.post('/:id/notas-credito', async (req, res) => {
+  const { monto, motivo, descripcion, fecha } = req.body;
+  const m = Number(monto);
+  if (!m || m <= 0) return res.status(400).json({ error: 'Ingresá un monto válido' });
+  if (!motivo || !motivo.trim()) return res.status(400).json({ error: 'Elegí un motivo' });
+
+  const detalle = [motivo.trim(), (descripcion || '').trim()].filter(Boolean).join(' · ');
+  const { data, error } = await supabase
+    .from('cliente_movimientos')
+    .insert({
+      cliente_id: req.params.id,
+      fecha: fecha || new Date().toISOString().slice(0, 10),
+      tipo: 'nota_credito',
+      monto: -Math.abs(m),
+      descripcion: detalle || 'Nota de crédito',
+    })
+    .select()
+    .single();
+  if (error) return res.status(400).json({ error: error.message });
+  res.status(201).json(data);
+});
+
 router.delete('/movimientos/:movId', requireAdmin, async (req, res) => {
   const { error } = await supabase.from('cliente_movimientos').delete().eq('id', req.params.movId);
   if (error) return res.status(400).json({ error: error.message });

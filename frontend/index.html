@@ -360,6 +360,51 @@
   .remito-doc table{width:100%;border-collapse:collapse;margin-top:10px;}
   .remito-doc th,.remito-doc td{border:1px solid #ccc;padding:8px;font-size:13px;}
 
+  .mov-tabs{display:flex;gap:6px;}
+  .mov-tab{
+    font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;
+    padding:7px 12px;border-radius:7px;border:1px solid var(--line);background:#fff;color:var(--ink-soft);
+  }
+  .mov-tab.active{background:var(--accent-soft);color:var(--accent);border-color:var(--accent-soft);}
+
+  /* INSTALL PWA */
+  .install-banner{
+    display:none;align-items:center;gap:14px;
+    background:var(--sidebar);color:#fff;border-radius:var(--radius);
+    padding:14px 18px;margin-bottom:20px;
+  }
+  .install-banner.show{display:flex;}
+  .install-banner .install-icon{
+    width:36px;height:36px;border-radius:9px;background:rgba(255,255,255,.08);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .install-banner .install-icon svg{width:19px;height:19px;stroke:var(--accent);}
+  .install-banner .install-text{flex:1;min-width:0;}
+  .install-banner .install-text strong{display:block;font-size:13.5px;}
+  .install-banner .install-text span{font-size:12px;color:var(--sidebar-soft);}
+  .install-banner .install-actions{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+  .install-banner button{font-family:inherit;cursor:pointer;border-radius:7px;font-size:12.5px;}
+  .install-banner .install-btn{
+    background:var(--accent);color:#fff;border:none;padding:8px 14px;font-weight:600;
+  }
+  .install-banner .install-btn:hover{opacity:.9;}
+  .install-banner .install-dismiss{
+    background:none;border:none;color:var(--sidebar-soft);padding:8px;font-size:16px;line-height:1;
+  }
+  .install-banner .install-dismiss:hover{color:#fff;}
+  .nav-item.nav-instalar{color:var(--sidebar-soft);}
+  .nav-item.nav-instalar svg{stroke:var(--accent);}
+  .install-guide-step{
+    display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);
+  }
+  .install-guide-step:last-child{border-bottom:none;}
+  .install-guide-step .n{
+    width:22px;height:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent);
+    font-size:11.5px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .install-guide-step p{font-size:13px;color:var(--ink-soft);line-height:1.5;}
+  .install-guide-step p strong{color:var(--ink);}
+
   /* tables need a scoped scroll container so a wide table never widens the page */
   .panel{overflow-x:auto;}
   .modal{overflow-x:auto;max-height:calc(100vh - 80px);overflow-y:auto;}
@@ -468,6 +513,7 @@
     <div class="nav-item" data-view="calendario"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Calendario</div>
     <div class="nav-item admin-only" data-view="reportes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-4"/></svg>Reportes</div>
     <div class="nav-item admin-only" data-view="usuarios"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>Usuarios</div>
+    <div class="nav-item nav-instalar" id="nav-instalar" onclick="abrirGuiaInstalacion()" style="display:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>Instalar app</div>
   </nav>
   <div class="user-badge">
     <div class="who"><span id="user-nombre"></span><span class="rol-tag" id="user-rol"></span></div>
@@ -476,6 +522,18 @@
 </aside>
 
 <main>
+
+  <div class="install-banner" id="install-banner">
+    <div class="install-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></div>
+    <div class="install-text">
+      <strong>Instalá Stockeador en tu celular o PC</strong>
+      <span>Se abre como una app, sin barra del navegador, y funciona más rápido.</span>
+    </div>
+    <div class="install-actions">
+      <button class="install-btn" id="install-banner-btn" onclick="clickInstalarPWA()">Instalar</button>
+      <button class="install-dismiss" onclick="descartarBannerInstalar()" aria-label="Cerrar">✕</button>
+    </div>
+  </div>
 
   <!-- DASHBOARD -->
   <section class="view active" id="view-dashboard">
@@ -698,6 +756,16 @@
   </section>
 
 </main>
+</div>
+
+<!-- MODAL GUÍA DE INSTALACIÓN -->
+<div class="overlay" id="overlay-instalar">
+  <div class="modal" style="max-width:440px;">
+    <span class="close-x" onclick="cerrarModal('overlay-instalar')">✕</span>
+    <h3>Instalar Stockeador</h3>
+    <p style="font-size:12.5px;color:var(--ink-soft);margin:4px 0 10px;">Se instala como una app normal: ícono en el celular/escritorio, sin barra del navegador.</p>
+    <div id="guia-instalar-contenido"></div>
+  </div>
 </div>
 
 <!-- MODAL PRODUCTO -->
@@ -950,24 +1018,47 @@
     </div>
     <div id="historial-movimientos" style="margin-top:14px;max-height:280px;overflow:auto;"></div>
 
-    <div class="field" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line);">
-      <label>Registrar pago</label>
+    <div class="field" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line);margin-bottom:10px;">
+      <div class="mov-tabs">
+        <button type="button" class="mov-tab active" id="tab-mov-pago" onclick="cambiarTabMovimientoCliente('pago')">Registrar pago</button>
+        <button type="button" class="mov-tab" id="tab-mov-nc" onclick="cambiarTabMovimientoCliente('nota_credito')">Nota de crédito</button>
+      </div>
     </div>
     <input type="hidden" id="pago-cliente-id">
-    <div class="grid3">
-      <div class="field"><label>Monto</label><input id="pago-monto" type="number" step="0.01" min="0" placeholder="0"></div>
-      <div class="field"><label>Descuento (opcional)</label><input id="pago-descuento" type="number" step="0.01" min="0" placeholder="0"></div>
-      <div class="field"><label>Banco / Cuenta (opcional)</label><input id="pago-banco" placeholder="Ej: Banco Galicia"></div>
+
+    <div id="form-mov-pago">
+      <div class="grid3">
+        <div class="field"><label>Monto</label><input id="pago-monto" type="number" step="0.01" min="0" placeholder="0"></div>
+        <div class="field"><label>Descuento (opcional)</label><input id="pago-descuento" type="number" step="0.01" min="0" placeholder="0"></div>
+        <div class="field"><label>Banco / Cuenta (opcional)</label><input id="pago-banco" placeholder="Ej: Banco Galicia"></div>
+      </div>
+      <div class="field"><label>Descripción (opcional)</label><input id="pago-descripcion" placeholder="Ej: efectivo, transferencia"></div>
+      <div class="field"><label>Imputar a un pedido (opcional)</label>
+        <select id="pago-venta-id">
+          <option value="">— No imputar a ningún pedido —</option>
+        </select>
+      </div>
     </div>
-    <div class="field"><label>Descripción (opcional)</label><input id="pago-descripcion" placeholder="Ej: efectivo, transferencia"></div>
-    <div class="field"><label>Imputar a un pedido (opcional)</label>
-      <select id="pago-venta-id">
-        <option value="">— No imputar a ningún pedido —</option>
-      </select>
+
+    <div id="form-mov-nc" style="display:none;">
+      <p style="font-size:12px;color:var(--ink-soft);margin-bottom:10px;">Le genera saldo a favor al cliente (por ejemplo por una devolución), sin necesidad de facturar.</p>
+      <div class="grid2">
+        <div class="field"><label>Monto</label><input id="nc-monto" type="number" step="0.01" min="0" placeholder="0"></div>
+        <div class="field"><label>Motivo</label>
+          <select id="nc-motivo">
+            <option value="Devolución de mercadería">Devolución de mercadería</option>
+            <option value="Producto defectuoso">Producto defectuoso</option>
+            <option value="Error de facturación">Error de facturación</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+      </div>
+      <div class="field"><label>Descripción (opcional)</label><input id="nc-descripcion" placeholder="Detalle adicional"></div>
     </div>
+
     <div class="modal-actions">
       <button class="btn secondary" onclick="cerrarModal('overlay-historial')">Cerrar</button>
-      <button class="btn" onclick="registrarPagoCliente()">Registrar pago</button>
+      <button class="btn" id="btn-guardar-mov-cliente" onclick="registrarPagoCliente()">Registrar pago</button>
     </div>
   </div>
 </div>
@@ -1051,11 +1142,79 @@ function mostrarApp(){
   document.querySelector('.nav-item[data-view="dashboard"]').classList.add('active');
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-dashboard').classList.add('active');
+  initInstalarPWA();
 }
 function mostrarLogin(){
   document.getElementById('app-shell').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('login-password').value = '';
+}
+
+/* ---------- INSTALAR PWA ---------- */
+let deferredInstallPrompt = null;
+const ES_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+const YA_INSTALADA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  mostrarBannerInstalar();
+});
+window.addEventListener('appinstalled', ()=>{
+  deferredInstallPrompt = null;
+  document.getElementById('install-banner').classList.remove('show');
+  toast('Stockeador instalado ✓');
+});
+
+function initInstalarPWA(){
+  if(YA_INSTALADA) return; // ya la tiene instalada, no mostrar nada
+  document.getElementById('nav-instalar').style.display = 'flex';
+  if(ES_IOS){
+    // iOS nunca dispara beforeinstallprompt: mostramos el banner con la guía manual.
+    mostrarBannerInstalar();
+  }
+}
+
+function bannerFueDescartadoRecientemente(){
+  const ts = Number(localStorage.getItem('stockeador-instalar-descartado') || 0);
+  return (Date.now() - ts) < 14 * 24 * 60 * 60 * 1000; // 14 días
+}
+function mostrarBannerInstalar(){
+  if(YA_INSTALADA || bannerFueDescartadoRecientemente()) return;
+  document.getElementById('install-banner').classList.add('show');
+}
+function descartarBannerInstalar(){
+  document.getElementById('install-banner').classList.remove('show');
+  localStorage.setItem('stockeador-instalar-descartado', String(Date.now()));
+}
+async function clickInstalarPWA(){
+  if(deferredInstallPrompt){
+    deferredInstallPrompt.prompt();
+    const { outcome } = await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    document.getElementById('install-banner').classList.remove('show');
+    if(outcome !== 'accepted') toast('Podés instalarla cuando quieras desde "Instalar app" en el menú');
+    return;
+  }
+  abrirGuiaInstalacion();
+}
+function abrirGuiaInstalacion(){
+  const cont = document.getElementById('guia-instalar-contenido');
+  if(ES_IOS){
+    cont.innerHTML = `
+      <div class="install-guide-step"><div class="n">1</div><p>Abrí esta página en <strong>Safari</strong> (no funciona desde Chrome en iPhone).</p></div>
+      <div class="install-guide-step"><div class="n">2</div><p>Tocá el botón <strong>Compartir</strong> (el cuadradito con la flecha hacia arriba), abajo en el centro.</p></div>
+      <div class="install-guide-step"><div class="n">3</div><p>Elegí <strong>"Agregar a inicio"</strong> y confirmá arriba a la derecha.</p></div>`;
+  } else if(deferredInstallPrompt){
+    cont.innerHTML = `
+      <div class="install-guide-step"><div class="n">1</div><p>Tocá el botón de abajo para instalarla ahora mismo.</p></div>
+      <div style="margin-top:6px;"><button class="btn" style="width:100%;justify-content:center;" onclick="cerrarModal('overlay-instalar');clickInstalarPWA();">Instalar ahora</button></div>`;
+  } else {
+    cont.innerHTML = `
+      <div class="install-guide-step"><div class="n">1</div><p><strong>En PC (Chrome/Edge):</strong> buscá el ícono de instalar (⊕) en la barra de direcciones, a la derecha.</p></div>
+      <div class="install-guide-step"><div class="n">2</div><p><strong>En Android (Chrome):</strong> tocá el menú ⋮ y elegí "Instalar app" o "Agregar a pantalla de inicio".</p></div>`;
+  }
+  document.getElementById('overlay-instalar').classList.add('active');
 }
 
 /* ---------- API ---------- */
@@ -2407,12 +2566,18 @@ async function abrirHistorialCliente(id){
   let c;
   try{ c = await apiGet('/clientes/'+id); }catch(e){ toast(e.message); return; }
   document.getElementById('historial-cliente-nombre').textContent = c.nombre;
-  document.getElementById('historial-saldo').textContent = fmt(c.saldo);
+  const saldoEl = document.getElementById('historial-saldo');
+  saldoEl.textContent = fmt(Math.abs(c.saldo)) + (c.saldo < 0 ? ' a favor' : '');
+  saldoEl.style.color = c.saldo < 0 ? 'var(--accent)' : (c.saldo > 0 ? 'var(--red)' : 'var(--ink)');
   document.getElementById('pago-cliente-id').value = c.id;
   document.getElementById('pago-monto').value = '';
   document.getElementById('pago-descuento').value = '';
   document.getElementById('pago-banco').value = '';
   document.getElementById('pago-descripcion').value = '';
+  document.getElementById('nc-monto').value = '';
+  document.getElementById('nc-motivo').value = 'Devolución de mercadería';
+  document.getElementById('nc-descripcion').value = '';
+  cambiarTabMovimientoCliente('pago');
 
   const pedidosPendientes = VENTAS.filter(v=>v.cliente_id===c.id && v.estado_pedido!=='Pagado');
   document.getElementById('pago-venta-id').innerHTML =
@@ -2423,9 +2588,11 @@ async function abrirHistorialCliente(id){
   if(c.movimientos.length===0){
     cont.innerHTML = '<p class="empty">Todavía no hay movimientos.</p>';
   } else {
-    cont.innerHTML = `<table><thead><tr><th>Fecha</th><th>Detalle</th><th class="num">Monto</th><th></th></tr></thead><tbody>
+    cont.innerHTML = `<table><thead><tr><th>Fecha</th><th>Detalle</th><th class="num">Monto</th><th></th><th class="admin-only-cell"></th></tr></thead><tbody>
       ${c.movimientos.map(m=>{
-        let detalle = m.descripcion||(m.tipo==='venta'?'Venta':m.tipo==='pago'?'Pago':'Ajuste');
+        const etiquetas = { venta:'Venta', pago:'Pago', ajuste:'Ajuste', nota_credito:'Nota de crédito' };
+        let detalle = m.descripcion||etiquetas[m.tipo]||'Movimiento';
+        if(m.tipo==='nota_credito') detalle = '🧾 ' + detalle;
         if(m.banco) detalle += ` · ${m.banco}`;
         if(m.tipo==='pago' && m.venta_id) detalle += ` · imputado a venta #${m.venta_id}`;
         return `<tr>
@@ -2433,10 +2600,45 @@ async function abrirHistorialCliente(id){
         <td>${detalle}</td>
         <td class="num" style="color:${m.monto>0?'var(--red)':'var(--accent)'};">${m.monto>0?'+':''}${fmt(m.monto)}</td>
         <td>${m.venta_id ? `<button class="btn secondary small" onclick="abrirDetalleVenta(${m.venta_id})">Ver detalle</button>` : ''}</td>
+        <td class="admin-only-cell">${m.tipo!=='venta' ? `<button class="btn secondary small" title="Eliminar movimiento" onclick="eliminarMovimientoCliente(${m.id}, ${c.id})">🗑</button>` : ''}</td>
       </tr>`;}).join('')}
     </tbody></table>`;
   }
   document.getElementById('overlay-historial').classList.add('active');
+}
+function cambiarTabMovimientoCliente(tipo){
+  const esPago = tipo === 'pago';
+  document.getElementById('tab-mov-pago').classList.toggle('active', esPago);
+  document.getElementById('tab-mov-nc').classList.toggle('active', !esPago);
+  document.getElementById('form-mov-pago').style.display = esPago ? '' : 'none';
+  document.getElementById('form-mov-nc').style.display = esPago ? 'none' : '';
+  const btn = document.getElementById('btn-guardar-mov-cliente');
+  btn.textContent = esPago ? 'Registrar pago' : 'Registrar nota de crédito';
+  btn.onclick = esPago ? registrarPagoCliente : registrarNotaCreditoCliente;
+}
+async function registrarNotaCreditoCliente(){
+  const id = document.getElementById('pago-cliente-id').value;
+  const monto = Number(document.getElementById('nc-monto').value);
+  if(!monto || monto<=0){ toast('Ingresá un monto válido'); return; }
+  const motivo = document.getElementById('nc-motivo').value;
+  const descripcion = document.getElementById('nc-descripcion').value.trim();
+  try{
+    await apiSend('/clientes/'+id+'/notas-credito', 'POST', { monto, motivo, descripcion });
+    CLIENTES = await apiGet('/clientes');
+    renderClientes();
+    toast('Nota de crédito registrada — saldo a favor actualizado');
+    await abrirHistorialCliente(id);
+  }catch(e){ toast(e.message); }
+}
+async function eliminarMovimientoCliente(movId, clienteId){
+  if(!confirm('¿Seguro que querés eliminar este movimiento? Se recalcula el saldo del cliente.')) return;
+  try{
+    await apiSend('/clientes/movimientos/'+movId, 'DELETE');
+    CLIENTES = await apiGet('/clientes');
+    renderClientes();
+    await abrirHistorialCliente(clienteId);
+    toast('Movimiento eliminado');
+  }catch(e){ toast(e.message); }
 }
 async function registrarPagoCliente(){
   const id = document.getElementById('pago-cliente-id').value;
