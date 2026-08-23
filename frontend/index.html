@@ -1802,7 +1802,7 @@ function buscarProductoVenta(i,q){
   if(!query){ cont.innerHTML=''; cont.classList.remove('show'); return; }
   const matches = PRODUCTOS.filter(p=>
     p.nombre.toLowerCase().includes(query) || (p.codigo||'').toLowerCase().includes(query)
-  ).slice(0,8);
+  );
   cont.innerHTML = matches.length===0
     ? '<div class="autocomplete-empty">Sin coincidencias</div>'
     : matches.map(p=>`<div class="autocomplete-item" onmousedown="seleccionarProductoVenta(${i},${p.id})">${p.nombre} <span class="ac-sub">${p.codigo} · stock: ${p.stock}</span></div>`).join('');
