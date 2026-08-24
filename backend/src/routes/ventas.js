@@ -144,7 +144,7 @@ function describirCambios(antes, despues) {
 }
 
 router.put('/:id', async (req, res) => {
-  const { fecha, cliente, items, descuento } = req.body;
+  const { fecha, cliente, items, descuento, clienteId } = req.body;
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'Agregá al menos un producto' });
   }
@@ -169,6 +169,7 @@ router.put('/:id', async (req, res) => {
     p_cliente: clienteNuevo,
     p_items: items,
     p_descuento: descuentoNuevo,
+    p_cliente_id: clienteId || null,
   });
   if (error) return res.status(400).json({ error: error.message });
 

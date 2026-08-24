@@ -1907,7 +1907,11 @@ async function editarVenta(id){
   document.getElementById('venta-editar-nota').style.display = 'block';
   document.getElementById('venta-fecha').value = v.fecha;
   quitarClienteVenta();
-  document.getElementById('venta-cliente').value = v.cliente;
+  if(v.cliente_id && CLIENTES.some(c=>c.id===v.cliente_id)){
+    seleccionarClienteVenta(v.cliente_id);
+  } else {
+    document.getElementById('venta-cliente').value = v.cliente;
+  }
   document.getElementById('venta-descuento').value = v.descuento ? Number(v.descuento) : '';
 
   ventaLineas = v.venta_items.map(i=>({productoId:i.producto_id, cantidad:Number(i.cantidad), precioUnit:Number(i.precio_unit)}));
@@ -1921,16 +1925,17 @@ async function guardarVenta(){
   try{
     let venta;
     const descuento = Number(document.getElementById('venta-descuento').value) || 0;
+    const clienteIdSel = document.getElementById('venta-cliente-id').value;
     if(id){
       venta = await apiSend('/ventas/'+id, 'PUT', {
         fecha: document.getElementById('venta-fecha').value || hoy(),
         cliente: document.getElementById('venta-cliente').value.trim(),
+        clienteId: clienteIdSel ? Number(clienteIdSel) : null,
         items: ventaLineas,
         descuento
       });
     } else {
       const generarFactura = document.getElementById('venta-factura').checked;
-      const clienteIdSel = document.getElementById('venta-cliente-id').value;
       venta = await apiSend('/ventas', 'POST', {
         fecha: document.getElementById('venta-fecha').value || hoy(),
         cliente: document.getElementById('venta-cliente').value.trim(),
