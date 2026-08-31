@@ -720,6 +720,14 @@
     <div class="topbar">
       <div><h1>Reportería</h1><div class="subtitle">Ventas, márgenes y productos más vendidos</div></div>
     </div>
+    <div class="panel" style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;">
+      <div class="field" style="margin:0;">
+        <label>Descargar reporte de un mes (Excel)</label>
+        <input type="month" id="rep-mes-excel">
+      </div>
+      <button class="btn" onclick="exportarReporteExcel(document.getElementById('rep-mes-excel').value)">📥 Descargar Excel del mes</button>
+      <button class="btn secondary" onclick="exportarReporteExcel(null)">📥 Descargar histórico completo</button>
+    </div>
     <div class="kpi-row">
       <div class="kpi"><div class="kpi-label">Ventas totales (histórico)</div><div class="kpi-value" id="rep-ventas-total">$0</div></div>
       <div class="kpi"><div class="kpi-label">Costo de lo vendido</div><div class="kpi-value" id="rep-costo-total">$0</div></div>
@@ -2459,6 +2467,8 @@ async function renderDashboard(){
 /* ---------- REPORTES ---------- */
 async function renderReportes(){
   if(SESION.rol !== 'admin') return;
+  const inputMes = document.getElementById('rep-mes-excel');
+  if(inputMes && !inputMes.value) inputMes.value = hoy().slice(0,7);
   let r;
   try{ r = await apiGet('/reportes'); }catch(e){ toast(e.message); return; }
 
@@ -2482,6 +2492,72 @@ async function renderReportes(){
 
   document.getElementById('tbl-mensual').innerHTML = r.mensual.length ? r.mensual.map(m=>`<tr><td>${m.mes}</td><td class="num">${m.n}</td><td class="num">${fmt(m.total)}</td></tr>`).join('')
     : `<tr><td colspan="3" class="empty">Sin datos de ventas todavía.</td></tr>`;
+}
+
+// Excel de reportería: si se pasa un mes ("YYYY-MM") filtra el 1 al último
+// día de ese mes; si se pasa null, exporta todo el histórico. Usa VENTAS
+// (ya cargado con venta_items, vendedor y márgenes) sin pegarle de nuevo al
+// backend — un solo archivo con varias hojas: resumen, por vendedor, top
+// productos y el detalle de cada venta.
+function exportarReporteExcel(mes){
+  const filtradas = mes ? VENTAS.filter(v=>v.fecha.slice(0,7)===mes) : VENTAS.slice();
+  if(filtradas.length===0){ toast(mes ? `No hay ventas en ${mes}` : 'No hay ventas para exportar'); return; }
+
+  const ventasTotal = filtradas.reduce((s,v)=>s+Number(v.total),0);
+  const margenTotal = filtradas.reduce((s,v)=>s+Number(v.margenPesos||0),0);
+  const costoTotal = ventasTotal - margenTotal;
+
+  const porVendedor = {};
+  filtradas.forEach(v=>{
+    const nombre = v.vendedor || 'Sin vendedor asignado';
+    if(!porVendedor[nombre]) porVendedor[nombre] = { vendedor: nombre, nVentas: 0, total: 0, comision: 0 };
+    porVendedor[nombre].nVentas += 1;
+    porVendedor[nombre].total += Number(v.total);
+    if(v.vendedor) porVendedor[nombre].comision += Number(v.comision||0);
+  });
+  const vendedores = Object.values(porVendedor).sort((a,b)=>b.total-a.total);
+
+  const porProducto = {};
+  filtradas.forEach(v=>{
+    (v.venta_items||[]).forEach(it=>{
+      const key = it.producto_nombre;
+      if(!porProducto[key]) porProducto[key] = { nombre: key, unidades: 0, facturado: 0 };
+      porProducto[key].unidades += Number(it.cantidad);
+      porProducto[key].facturado += Number(it.cantidad)*Number(it.precio_unit);
+    });
+  });
+  const top = Object.values(porProducto).sort((a,b)=>b.unidades-a.unidades);
+
+  const wb = XLSX.utils.book_new();
+
+  const filasResumen = [
+    { 'Indicador': 'Período', 'Valor': mes || 'Histórico completo' },
+    { 'Indicador': 'Ventas totales', 'Valor': ventasTotal },
+    { 'Indicador': 'Costo de lo vendido', 'Valor': costoTotal },
+    { 'Indicador': 'Margen bruto', 'Valor': margenTotal },
+    { 'Indicador': 'Nº de ventas', 'Valor': filtradas.length },
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(filasResumen), 'Resumen');
+
+  const filasVendedores = vendedores.map(v=>({
+    'Vendedor': v.vendedor, 'Nº de ventas': v.nVentas, 'Total vendido': v.total, 'Comisión (5%)': v.comision || ''
+  }));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(filasVendedores), 'Por vendedor');
+
+  const filasTop = top.map(t=>({ 'Producto': t.nombre, 'Unidades': t.unidades, 'Facturado': t.facturado }));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(filasTop), 'Top productos');
+
+  const filasDetalle = filtradas
+    .slice()
+    .sort((a,b)=> a.fecha<b.fecha?-1:a.fecha>b.fecha?1:a.id-b.id)
+    .map(v=>({
+      'Nº': v.id, 'Fecha': v.fecha, 'Cliente': v.cliente, 'Vendedor': v.vendedor || 'Sin vendedor asignado',
+      'Estado': v.estado_pedido, 'Total': Number(v.total)
+    }));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(filasDetalle), 'Detalle de ventas');
+
+  const nombreArchivo = mes ? `reporte-ventas-${mes}.xlsx` : `reporte-ventas-historico-${hoy()}.xlsx`;
+  XLSX.writeFile(wb, nombreArchivo);
 }
 
 /* ---------- CLIENTES ---------- */
