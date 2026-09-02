@@ -14,6 +14,7 @@ import recordatoriosRouter from '../backend/src/routes/recordatorios.js';
 import dashboardRouter from '../backend/src/routes/dashboard.js';
 import reportesRouter from '../backend/src/routes/reportes.js';
 import gastosRouter from '../backend/src/routes/gastos.js';
+import proveedoresRouter from '../backend/src/routes/proveedores.js';
 import { requireAuth } from '../backend/src/auth.js';
 
 const app = express();
@@ -37,6 +38,7 @@ app.use('/api/recordatorios', recordatoriosRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/reportes', reportesRouter);
 app.use('/api/gastos', gastosRouter);
+app.use('/api/proveedores', proveedoresRouter);
 
 app.use((err, req, res, next) => {
   console.error(err);

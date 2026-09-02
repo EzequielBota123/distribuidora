@@ -507,6 +507,7 @@
     <div class="nav-item" data-view="productos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Productos</div>
     <div class="nav-item admin-only" data-view="compras"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h2l2.4 12.4a2 2 0 002 1.6h9.2a2 2 0 002-1.6L22 6H6"/></svg>Ingresos / Compras</div>
     <div class="nav-item" data-view="gastos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20"/><circle cx="12" cy="14.5" r="1.5"/></svg>Gastos</div>
+    <div class="nav-item" data-view="proveedores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>Proveedores</div>
     <div class="nav-item" data-view="ventas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2l1.5 4h9L18 2"/><rect x="4" y="6" width="16" height="14" rx="2"/><path d="M9 11a3 3 0 006 0"/></svg>Ventas</div>
     <div class="nav-item" data-view="clientes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Clientes</div>
     <div class="nav-item" data-view="remitos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>Remitos</div>
@@ -772,8 +773,20 @@
       <button class="btn danger small admin-only" onclick="vaciarGastos()" style="margin-left:auto;">Vaciar todo</button>
     </div>
     <div class="panel" style="padding:0;overflow:auto;">
-      <table><thead><tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th class="num">Monto</th><th>Cargado por</th><th>Comprobante</th><th></th></tr></thead>
+      <table><thead><tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th>Proveedor</th><th class="num">Monto</th><th class="num">Monto USD</th><th>Cargado por</th><th>Comprobante</th><th></th></tr></thead>
         <tbody id="tbl-gastos"></tbody></table>
+    </div>
+  </section>
+
+  <!-- PROVEEDORES -->
+  <section class="view" id="view-proveedores">
+    <div class="topbar">
+      <div><h1>Proveedores</h1><div class="subtitle">A quién le compramos, y cuánto se gastó con cada uno</div></div>
+      <button class="btn" onclick="abrirModalProveedor()">+ Nuevo proveedor</button>
+    </div>
+    <div class="panel" style="padding:0;overflow:auto;">
+      <table><thead><tr><th>Proveedor</th><th>Teléfono</th><th class="num">Total gastado ($)</th><th class="num">Total gastado (USD)</th><th>Notas</th><th></th></tr></thead>
+        <tbody id="tbl-proveedores"></tbody></table>
     </div>
   </section>
 
@@ -843,6 +856,7 @@
           <option>General</option>
           <option>Alquiler</option>
           <option>Sueldos</option>
+          <option>Comisiones</option>
           <option>Servicios</option>
           <option>Impuestos</option>
           <option>Insumos</option>
@@ -853,12 +867,36 @@
       </div>
     </div>
     <div class="field"><label>Concepto</label><input id="gasto-concepto" placeholder="Ej: Alquiler local agosto"></div>
-    <div class="field"><label>Monto</label><input id="gasto-monto" type="number" step="0.01" min="0" placeholder="0"></div>
+    <div class="field"><label>Proveedor (opcional)</label>
+      <input id="gasto-proveedor" list="gasto-proveedores-datalist" placeholder="Empezá a tipear o elegí uno existente">
+      <datalist id="gasto-proveedores-datalist"></datalist>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Monto USD (opcional)</label><input id="gasto-monto-usd" type="number" step="0.01" placeholder="0" oninput="recalcularMontoGastoDesdeUsd()"></div>
+      <div class="field"><label>Monto ($)</label><input id="gasto-monto" type="number" step="0.01" min="0" placeholder="0"></div>
+    </div>
+    <p style="font-size:11px;color:var(--ink-soft);margin-top:-8px;margin-bottom:12px;">Si cargás el monto en USD, el monto en pesos se calcula solo con la cotización actual.</p>
     <div class="field"><label>Comprobante (opcional)</label><input type="file" id="gasto-comprobante" accept="image/*,application/pdf"></div>
     <p id="gasto-comprobante-actual" style="font-size:11px;color:var(--ink-soft);margin-top:-8px;margin-bottom:12px;display:none;"></p>
     <div class="modal-actions">
       <button class="btn secondary" onclick="cerrarModal('overlay-gasto')">Cancelar</button>
       <button class="btn" id="gasto-btn-guardar" onclick="guardarGasto()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PROVEEDOR -->
+<div class="overlay" id="overlay-proveedor">
+  <div class="modal">
+    <span class="close-x" onclick="cerrarModal('overlay-proveedor')">✕</span>
+    <h3 id="proveedor-modal-title">Nuevo proveedor</h3>
+    <input type="hidden" id="proveedor-id">
+    <div class="field"><label>Nombre</label><input id="proveedor-nombre" placeholder="Nombre del proveedor"></div>
+    <div class="field"><label>Teléfono (opcional)</label><input id="proveedor-telefono" placeholder="Ej: 11 5555-5555"></div>
+    <div class="field"><label>Notas (opcional)</label><textarea id="proveedor-notas" rows="2"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="cerrarModal('overlay-proveedor')">Cancelar</button>
+      <button class="btn" onclick="guardarProveedor()">Guardar</button>
     </div>
   </div>
 </div>
@@ -905,7 +943,7 @@
     <span class="close-x" onclick="cerrarModal('overlay-importar-gastos')">✕</span>
     <h3>Importar gastos desde Excel / CSV</h3>
     <p style="font-size:12.5px;color:var(--ink-soft);line-height:1.6;margin-bottom:14px;">
-      Columnas reconocidas: <strong>fecha</strong>, <strong>concepto</strong>, categoría (opcional, "General" si no viene), <strong>monto</strong>
+      Columnas reconocidas: <strong>fecha</strong>, <strong>concepto</strong>, categoría (opcional, "General" si no viene), proveedor (opcional, se crea solo si no existe), y <strong>monto</strong> y/o <strong>monto USD</strong>
       (los nombres de columna son flexibles, ej. "Detalle", "Importe" o "Descripción" también funcionan).
       La fecha puede venir como fecha de Excel o como texto (DD/MM/AAAA o AAAA-MM-DD). El monto puede tener "$" y puntos de miles.
       <a href="#" onclick="descargarPlantillaGastos();return false;" style="color:var(--accent);font-weight:600;">Descargar plantilla de ejemplo</a>
@@ -1323,7 +1361,7 @@ async function apiSend(path, method, body){
 }
 
 /* ---------- ESTADO ---------- */
-let PRODUCTOS = [], COMPRAS = [], VENTAS = [], REMITOS = [], FACTURAS = [], RECORDATORIOS = [], USUARIOS = [], CLIENTES = [], GASTOS = [];
+let PRODUCTOS = [], COMPRAS = [], VENTAS = [], REMITOS = [], FACTURAS = [], RECORDATORIOS = [], USUARIOS = [], CLIENTES = [], GASTOS = [], PROVEEDORES = [];
 let TIPO_CAMBIO = { valor: 0, updated_at: null };
 let compraLineas = [];
 let ventaLineas = [];
@@ -1387,6 +1425,7 @@ document.getElementById('nav').addEventListener('click', e=>{
   if(item.dataset.view==='usuarios') renderUsuarios();
   if(item.dataset.view==='clientes') renderClientes();
   if(item.dataset.view==='gastos') renderGastos();
+  if(item.dataset.view==='proveedores') renderProveedores();
   toggleSidebar(false);
 });
 function cerrarModal(id){ document.getElementById(id).classList.remove('active'); }
@@ -1723,6 +1762,8 @@ const HEADER_MAP_GASTOS = {
   concepto:'concepto', detalle:'concepto', descripcion:'concepto', gasto:'concepto', item:'concepto',
   categoria:'categoria', rubro:'categoria', tipo:'categoria', tipodegasto:'categoria',
   monto:'monto', importe:'monto', total:'monto', valor:'monto', precio:'monto',
+  proveedor:'proveedor', prov:'proveedor', razonsocial:'proveedor',
+  montousd:'montoUsd', usd:'montoUsd', dolares:'montoUsd', dolar:'montoUsd', importeusd:'montoUsd', totalusd:'montoUsd',
 };
 // Acepta: fecha de Excel (número serie), Date ya parseado, "DD/MM/AAAA",
 // "DD-MM-AAAA" o "AAAA-MM-DD". Devuelve "AAAA-MM-DD" o null si no se pudo.
@@ -1761,11 +1802,16 @@ function mapearFilaGasto(row){
     if(campo && String(row[key]).trim()!=='') out[campo] = row[key];
   }
   const fecha = parseFechaFlexibleGasto(out.fecha);
+  const montoUsd = out.montoUsd!==undefined ? parseMontoFlexibleGasto(out.montoUsd) : null;
+  const monto = out.monto!==undefined ? parseMontoFlexibleGasto(out.monto) : null;
   return {
     fecha, fechaOriginal: out.fecha,
     concepto: out.concepto ? String(out.concepto).trim() : '',
     categoria: out.categoria ? String(out.categoria).trim() : 'General',
-    monto: out.monto!==undefined ? parseMontoFlexibleGasto(out.monto) : null,
+    proveedor: out.proveedor ? String(out.proveedor).trim() : '',
+    monto, montoUsd,
+    // válido si al menos una de las dos monedas se pudo leer
+    montoOk: (out.montoUsd!==undefined && montoUsd!=null) || (out.monto!==undefined && monto!=null),
   };
 }
 async function manejarArchivoImportarGastos(input){
@@ -1773,7 +1819,7 @@ async function manejarArchivoImportarGastos(input){
   if(!file) return;
   try{
     const filas = await parseArchivoImportar(file);
-    importGastosPreview = filas.map(mapearFilaGasto).filter(r=>r.concepto || r.monto!=null);
+    importGastosPreview = filas.map(mapearFilaGasto).filter(r=>r.concepto || r.montoOk);
   }catch(e){
     importGastosPreview = [];
     toast('No se pudo leer el archivo. Verificá que sea .xlsx, .xls o .csv');
@@ -1788,22 +1834,24 @@ function renderPreviewImportarGastos(){
     btn.disabled = true;
     return;
   }
-  const invalidas = importGastosPreview.filter(r=>!r.concepto || r.monto==null || !r.fecha).length;
+  const invalidas = importGastosPreview.filter(r=>!r.concepto || !r.montoOk || !r.fecha).length;
   const muestra = importGastosPreview.slice(0,10);
   cont.innerHTML = `
     <p style="font-size:12px;color:var(--ink-soft);margin-bottom:8px;">
       ${importGastosPreview.length} fila(s) detectada(s)${invalidas?` — ${invalidas} con algún dato faltante o no reconocido (revisá antes de confirmar)`:''}. Vista previa:
     </p>
     <div style="overflow:auto;max-height:220px;border:1px solid var(--line);border-radius:8px;">
-    <table><thead><tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th class="num">Monto</th></tr></thead>
+    <table><thead><tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th>Proveedor</th><th class="num">Monto</th><th class="num">Monto USD</th></tr></thead>
     <tbody>${muestra.map(r=>{
       const fechaMal = !r.fecha;
-      const montoMal = r.monto==null;
+      const montoMal = !r.montoOk;
       return `<tr>
         <td style="${fechaMal?'color:var(--red);':''}">${r.fecha || (fechaMal ? `⚠️ "${r.fechaOriginal??''}"` : '—')}</td>
         <td style="${!r.concepto?'color:var(--red);':''}">${r.concepto || '⚠️ falta'}</td>
         <td>${r.categoria||'—'}</td>
-        <td class="num" style="${montoMal?'color:var(--red);':''}">${montoMal ? '⚠️ inválido' : fmt(r.monto)}</td>
+        <td>${r.proveedor||'—'}</td>
+        <td class="num" style="${montoMal?'color:var(--red);':''}">${(!montoMal && r.monto!=null) ? fmt(r.monto) : (montoMal ? '⚠️ inválido' : '—')}</td>
+        <td class="num">${r.montoUsd!=null ? 'U$D '+r.montoUsd.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'}</td>
       </tr>`;
     }).join('')}</tbody>
     </table></div>`;
@@ -1816,7 +1864,7 @@ function abrirModalImportarGastos(){
   document.getElementById('overlay-importar-gastos').classList.add('active');
 }
 async function confirmarImportacionGastos(){
-  const validas = importGastosPreview.filter(r=>r.concepto && r.monto!=null && r.fecha);
+  const validas = importGastosPreview.filter(r=>r.concepto && r.montoOk && r.fecha);
   if(validas.length===0){ toast('No hay filas válidas para importar'); return; }
   const btn = document.getElementById('import-gastos-btn-confirmar');
   btn.disabled = true; btn.textContent = 'Importando…';
@@ -1832,7 +1880,7 @@ async function confirmarImportacionGastos(){
   btn.disabled = false; btn.textContent = 'Confirmar importación';
 }
 function descargarPlantillaGastos(){
-  const csv = 'fecha,concepto,categoria,monto\n2026-08-01,Alquiler local agosto,Alquiler,350000\n';
+  const csv = 'fecha,concepto,categoria,proveedor,monto,montoUsd\n2026-08-01,Alquiler local agosto,Alquiler,,350000,\n2026-08-05,Compra de insumos,Insumos,Proveedor Ejemplo S.A.,,120\n';
   const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -2863,7 +2911,9 @@ async function renderGastos(){
       <td>${g.fecha}</td>
       <td>${g.concepto}</td>
       <td>${g.categoria}</td>
+      <td>${g.proveedorNombre||'—'}</td>
       <td class="num">${fmt(g.monto)}</td>
+      <td class="num">${g.monto_usd!=null ? 'U$D '+Number(g.monto_usd).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'}</td>
       <td>${g.cargadoPorNombre||'—'}</td>
       <td>${g.comprobante_url ? `<a href="${g.comprobante_url}" target="_blank">Ver</a>` : '—'}</td>
       <td style="white-space:nowrap;">
@@ -2871,16 +2921,23 @@ async function renderGastos(){
         <button class="btn danger small admin-only" onclick="eliminarGasto(${g.id})">🗑</button>
       </td>
     </tr>`).join('')
-    : `<tr><td colspan="7" class="empty">${mesFiltro ? 'Sin gastos en ese mes.' : 'Todavía no hay gastos cargados.'}</td></tr>`;
+    : `<tr><td colspan="9" class="empty">${mesFiltro ? 'Sin gastos en ese mes.' : 'Todavía no hay gastos cargados.'}</td></tr>`;
 }
-function abrirModalGasto(gasto){
+async function abrirModalGasto(gasto){
   document.getElementById('gasto-modal-title').textContent = gasto ? 'Editar gasto' : 'Nuevo gasto';
   document.getElementById('gasto-id').value = gasto ? gasto.id : '';
   document.getElementById('gasto-fecha').value = gasto ? gasto.fecha : hoy();
   document.getElementById('gasto-categoria').value = gasto ? gasto.categoria : 'General';
   document.getElementById('gasto-concepto').value = gasto ? gasto.concepto : '';
+  document.getElementById('gasto-proveedor').value = gasto ? (gasto.proveedorNombre||'') : '';
+  document.getElementById('gasto-monto-usd').value = gasto && gasto.monto_usd!=null ? Number(gasto.monto_usd) : '';
   document.getElementById('gasto-monto').value = gasto ? Number(gasto.monto) : '';
   document.getElementById('gasto-comprobante').value = '';
+  try{
+    if(PROVEEDORES.length===0) PROVEEDORES = await apiGet('/proveedores');
+    document.getElementById('gasto-proveedores-datalist').innerHTML = PROVEEDORES.map(p=>`<option value="${p.nombre}">`).join('');
+  }catch(e){}
+  recalcularMontoGastoDesdeUsd();
   const actual = document.getElementById('gasto-comprobante-actual');
   if(gasto && gasto.comprobante_url){
     actual.style.display = 'block';
@@ -2890,12 +2947,25 @@ function abrirModalGasto(gasto){
   }
   document.getElementById('overlay-gasto').classList.add('active');
 }
+function recalcularMontoGastoDesdeUsd(){
+  const usdField = document.getElementById('gasto-monto-usd');
+  const montoField = document.getElementById('gasto-monto');
+  if(usdField.value !== ''){
+    montoField.value = (Number(usdField.value) * TIPO_CAMBIO.valor).toFixed(2);
+    montoField.disabled = true;
+    montoField.style.background = '#f4f5f7';
+  } else {
+    montoField.disabled = false;
+    montoField.style.background = '';
+  }
+}
 function editarGasto(id){
   abrirModalGasto(GASTOS.find(g=>g.id===id));
 }
 async function guardarGasto(){
   const concepto = document.getElementById('gasto-concepto').value.trim();
   if(!concepto){ toast('Ingresá un concepto'); return; }
+  const montoUsdVal = document.getElementById('gasto-monto-usd').value;
   const monto = Number(document.getElementById('gasto-monto').value);
   if(!monto || monto<=0){ toast('Ingresá un monto válido'); return; }
   const id = document.getElementById('gasto-id').value;
@@ -2903,7 +2973,9 @@ async function guardarGasto(){
     fecha: document.getElementById('gasto-fecha').value || hoy(),
     concepto,
     categoria: document.getElementById('gasto-categoria').value,
+    proveedor: document.getElementById('gasto-proveedor').value.trim(),
     monto,
+    montoUsd: montoUsdVal!=='' ? Number(montoUsdVal) : null,
   };
   const file = document.getElementById('gasto-comprobante').files[0];
   if(file){
@@ -2914,6 +2986,7 @@ async function guardarGasto(){
     if(id) await apiSend('/gastos/'+id, 'PUT', payload);
     else await apiSend('/gastos', 'POST', payload);
     cerrarModal('overlay-gasto');
+    PROVEEDORES = await apiGet('/proveedores');
     renderGastos();
     toast('Gasto guardado');
   }catch(e){ toast(e.message); }
@@ -2933,6 +3006,67 @@ async function vaciarGastos(){
     await apiSend('/gastos', 'DELETE');
     renderGastos();
     toast('Gastos eliminados');
+  }catch(e){ toast(e.message); }
+}
+
+/* ---------- PROVEEDORES ---------- */
+async function renderProveedores(){
+  try{
+    [PROVEEDORES, GASTOS] = await Promise.all([apiGet('/proveedores'), apiGet('/gastos')]);
+  }catch(e){ toast(e.message); return; }
+
+  const tbody = document.getElementById('tbl-proveedores');
+  tbody.innerHTML = PROVEEDORES.length ? PROVEEDORES.map(p=>{
+    const gastosProv = GASTOS.filter(g=>g.proveedor_id===p.id);
+    const totalPesos = gastosProv.reduce((s,g)=>s+Number(g.monto||0),0);
+    const totalUsd = gastosProv.reduce((s,g)=>s+Number(g.monto_usd||0),0);
+    return `<tr>
+      <td>${p.nombre}</td>
+      <td>${p.telefono||'—'}</td>
+      <td class="num">${fmt(totalPesos)}</td>
+      <td class="num">${totalUsd>0 ? 'U$D '+totalUsd.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'}</td>
+      <td>${p.notas||'—'}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn secondary small" onclick="editarProveedor(${p.id})">Editar</button>
+        <button class="btn danger small admin-only" onclick="eliminarProveedor(${p.id})">🗑</button>
+      </td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="6" class="empty">Todavía no hay proveedores cargados.</td></tr>`;
+}
+function abrirModalProveedor(proveedor){
+  document.getElementById('proveedor-modal-title').textContent = proveedor ? 'Editar proveedor' : 'Nuevo proveedor';
+  document.getElementById('proveedor-id').value = proveedor ? proveedor.id : '';
+  document.getElementById('proveedor-nombre').value = proveedor ? proveedor.nombre : '';
+  document.getElementById('proveedor-telefono').value = proveedor ? (proveedor.telefono||'') : '';
+  document.getElementById('proveedor-notas').value = proveedor ? (proveedor.notas||'') : '';
+  document.getElementById('overlay-proveedor').classList.add('active');
+}
+function editarProveedor(id){
+  abrirModalProveedor(PROVEEDORES.find(p=>p.id===id));
+}
+async function guardarProveedor(){
+  const nombre = document.getElementById('proveedor-nombre').value.trim();
+  if(!nombre){ toast('Ingresá un nombre'); return; }
+  const id = document.getElementById('proveedor-id').value;
+  const payload = {
+    nombre,
+    telefono: document.getElementById('proveedor-telefono').value.trim(),
+    notas: document.getElementById('proveedor-notas').value.trim(),
+  };
+  try{
+    if(id) await apiSend('/proveedores/'+id, 'PUT', payload);
+    else await apiSend('/proveedores', 'POST', payload);
+    cerrarModal('overlay-proveedor');
+    renderProveedores();
+    toast('Proveedor guardado');
+  }catch(e){ toast(e.message); }
+}
+async function eliminarProveedor(id){
+  if(!confirm('¿Seguro que querés eliminar este proveedor? Los gastos ya cargados quedan sin proveedor asignado.')) return;
+  try{
+    await apiSend('/proveedores/'+id, 'DELETE');
+    renderProveedores();
+    toast('Proveedor eliminado');
   }catch(e){ toast(e.message); }
 }
 async function vaciarClientes(){
