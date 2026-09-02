@@ -507,7 +507,6 @@
     <div class="nav-item" data-view="productos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Productos</div>
     <div class="nav-item admin-only" data-view="compras"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h2l2.4 12.4a2 2 0 002 1.6h9.2a2 2 0 002-1.6L22 6H6"/></svg>Ingresos / Compras</div>
     <div class="nav-item" data-view="gastos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20"/><circle cx="12" cy="14.5" r="1.5"/></svg>Gastos</div>
-    <div class="nav-item" data-view="proveedores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>Proveedores</div>
     <div class="nav-item" data-view="ventas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2l1.5 4h9L18 2"/><rect x="4" y="6" width="16" height="14" rx="2"/><path d="M9 11a3 3 0 006 0"/></svg>Ventas</div>
     <div class="nav-item" data-view="clientes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Clientes</div>
     <div class="nav-item" data-view="remitos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>Remitos</div>
@@ -776,15 +775,12 @@
       <table><thead><tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th>Proveedor</th><th class="num">Monto</th><th class="num">Monto USD</th><th>Cargado por</th><th>Comprobante</th><th></th></tr></thead>
         <tbody id="tbl-gastos"></tbody></table>
     </div>
-  </section>
 
-  <!-- PROVEEDORES -->
-  <section class="view" id="view-proveedores">
-    <div class="topbar">
-      <div><h1>Proveedores</h1><div class="subtitle">A quién le compramos, y cuánto se gastó con cada uno</div></div>
-      <button class="btn" onclick="abrirModalProveedor()">+ Nuevo proveedor</button>
-    </div>
-    <div class="panel" style="padding:0;overflow:auto;">
+    <div class="panel">
+      <div class="panel-head">
+        <h3>Proveedores — a quién le compramos y cuánto se gastó con cada uno</h3>
+        <button class="btn secondary small" onclick="abrirModalProveedor()">+ Nuevo proveedor</button>
+      </div>
       <table><thead><tr><th>Proveedor</th><th>Teléfono</th><th class="num">Total gastado ($)</th><th class="num">Total gastado (USD)</th><th>Notas</th><th></th></tr></thead>
         <tbody id="tbl-proveedores"></tbody></table>
     </div>
@@ -1424,8 +1420,7 @@ document.getElementById('nav').addEventListener('click', e=>{
   if(item.dataset.view==='calendario') renderCalendario();
   if(item.dataset.view==='usuarios') renderUsuarios();
   if(item.dataset.view==='clientes') renderClientes();
-  if(item.dataset.view==='gastos') renderGastos();
-  if(item.dataset.view==='proveedores') renderProveedores();
+  if(item.dataset.view==='gastos'){ renderGastos(); renderProveedores(); }
   toggleSidebar(false);
 });
 function cerrarModal(id){ document.getElementById(id).classList.remove('active'); }
