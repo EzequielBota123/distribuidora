@@ -757,7 +757,10 @@
   <section class="view" id="view-gastos">
     <div class="topbar">
       <div><h1>Gastos</h1><div class="subtitle">Gastos de la distribuidora — alquiler, sueldos, servicios, impuestos, etc.</div></div>
-      <button class="btn" onclick="abrirModalGasto()">+ Nuevo gasto</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn secondary" onclick="abrirModalImportarGastos()">⇪ Importar Excel/CSV</button>
+        <button class="btn" onclick="abrirModalGasto()">+ Nuevo gasto</button>
+      </div>
     </div>
     <div class="kpi-row">
       <div class="kpi"><div class="kpi-label">Gastos del mes</div><div class="kpi-value" id="kpi-gastos-mes">$0</div></div>
@@ -892,6 +895,26 @@
     <div class="modal-actions">
       <button class="btn secondary" onclick="cerrarModal('overlay-importar')">Cancelar</button>
       <button class="btn" id="import-btn-confirmar" disabled onclick="confirmarImportacion()">Confirmar importación</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL IMPORTAR GASTOS -->
+<div class="overlay" id="overlay-importar-gastos">
+  <div class="modal" style="max-width:660px;">
+    <span class="close-x" onclick="cerrarModal('overlay-importar-gastos')">✕</span>
+    <h3>Importar gastos desde Excel / CSV</h3>
+    <p style="font-size:12.5px;color:var(--ink-soft);line-height:1.6;margin-bottom:14px;">
+      Columnas reconocidas: <strong>fecha</strong>, <strong>concepto</strong>, categoría (opcional, "General" si no viene), <strong>monto</strong>
+      (los nombres de columna son flexibles, ej. "Detalle", "Importe" o "Descripción" también funcionan).
+      La fecha puede venir como fecha de Excel o como texto (DD/MM/AAAA o AAAA-MM-DD). El monto puede tener "$" y puntos de miles.
+      <a href="#" onclick="descargarPlantillaGastos();return false;" style="color:var(--accent);font-weight:600;">Descargar plantilla de ejemplo</a>
+    </p>
+    <div class="field"><input type="file" id="import-gastos-file" accept=".xlsx,.xls,.csv" onchange="manejarArchivoImportarGastos(this)"></div>
+    <div id="import-gastos-preview"><p class="empty">Elegí un archivo para ver la vista previa.</p></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="cerrarModal('overlay-importar-gastos')">Cancelar</button>
+      <button class="btn" id="import-gastos-btn-confirmar" disabled onclick="confirmarImportacionGastos()">Confirmar importación</button>
     </div>
   </div>
 </div>
@@ -1689,6 +1712,131 @@ function descargarPlantilla(){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = 'plantilla-productos.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/* ---------- IMPORTAR GASTOS ---------- */
+let importGastosPreview = [];
+const HEADER_MAP_GASTOS = {
+  fecha:'fecha', dia:'fecha',
+  concepto:'concepto', detalle:'concepto', descripcion:'concepto', gasto:'concepto', item:'concepto',
+  categoria:'categoria', rubro:'categoria', tipo:'categoria', tipodegasto:'categoria',
+  monto:'monto', importe:'monto', total:'monto', valor:'monto', precio:'monto',
+};
+// Acepta: fecha de Excel (número serie), Date ya parseado, "DD/MM/AAAA",
+// "DD-MM-AAAA" o "AAAA-MM-DD". Devuelve "AAAA-MM-DD" o null si no se pudo.
+function parseFechaFlexibleGasto(v){
+  if(v===undefined || v===null || v==='') return null;
+  if(v instanceof Date && !isNaN(v)) return v.toISOString().slice(0,10);
+  if(typeof v === 'number'){
+    // Serie de fecha de Excel (días desde 1899-12-30).
+    const d = new Date(Date.UTC(1899,11,30) + Math.round(v)*86400000);
+    return isNaN(d) ? null : d.toISOString().slice(0,10);
+  }
+  const s = String(v).trim();
+  let m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(s);
+  if(m) return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+  m = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/.exec(s);
+  if(m) return `${m[3]}-${String(m[2]).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}`;
+  return null;
+}
+// Acepta número directo, "$ 1.234,56" (formato argentino) o "1234.56".
+function parseMontoFlexibleGasto(v){
+  if(typeof v === 'number') return v;
+  let s = String(v||'').trim().replace(/[^\d.,-]/g,'');
+  if(!s) return null;
+  if(s.includes(',') && s.includes('.')){
+    s = s.replace(/\./g,'').replace(',', '.');
+  } else if(s.includes(',')){
+    s = s.replace(',', '.');
+  }
+  const n = Number(s);
+  return isNaN(n) ? null : n;
+}
+function mapearFilaGasto(row){
+  const out = {};
+  for(const key in row){
+    const campo = HEADER_MAP_GASTOS[normalizarHeader(key)];
+    if(campo && String(row[key]).trim()!=='') out[campo] = row[key];
+  }
+  const fecha = parseFechaFlexibleGasto(out.fecha);
+  return {
+    fecha, fechaOriginal: out.fecha,
+    concepto: out.concepto ? String(out.concepto).trim() : '',
+    categoria: out.categoria ? String(out.categoria).trim() : 'General',
+    monto: out.monto!==undefined ? parseMontoFlexibleGasto(out.monto) : null,
+  };
+}
+async function manejarArchivoImportarGastos(input){
+  const file = input.files[0];
+  if(!file) return;
+  try{
+    const filas = await parseArchivoImportar(file);
+    importGastosPreview = filas.map(mapearFilaGasto).filter(r=>r.concepto || r.monto!=null);
+  }catch(e){
+    importGastosPreview = [];
+    toast('No se pudo leer el archivo. Verificá que sea .xlsx, .xls o .csv');
+  }
+  renderPreviewImportarGastos();
+}
+function renderPreviewImportarGastos(){
+  const cont = document.getElementById('import-gastos-preview');
+  const btn = document.getElementById('import-gastos-btn-confirmar');
+  if(importGastosPreview.length===0){
+    cont.innerHTML = '<p class="empty">Elegí un archivo para ver la vista previa.</p>';
+    btn.disabled = true;
+    return;
+  }
+  const invalidas = importGastosPreview.filter(r=>!r.concepto || r.monto==null || !r.fecha).length;
+  const muestra = importGastosPreview.slice(0,10);
+  cont.innerHTML = `
+    <p style="font-size:12px;color:var(--ink-soft);margin-bottom:8px;">
+      ${importGastosPreview.length} fila(s) detectada(s)${invalidas?` — ${invalidas} con algún dato faltante o no reconocido (revisá antes de confirmar)`:''}. Vista previa:
+    </p>
+    <div style="overflow:auto;max-height:220px;border:1px solid var(--line);border-radius:8px;">
+    <table><thead><tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th class="num">Monto</th></tr></thead>
+    <tbody>${muestra.map(r=>{
+      const fechaMal = !r.fecha;
+      const montoMal = r.monto==null;
+      return `<tr>
+        <td style="${fechaMal?'color:var(--red);':''}">${r.fecha || (fechaMal ? `⚠️ "${r.fechaOriginal??''}"` : '—')}</td>
+        <td style="${!r.concepto?'color:var(--red);':''}">${r.concepto || '⚠️ falta'}</td>
+        <td>${r.categoria||'—'}</td>
+        <td class="num" style="${montoMal?'color:var(--red);':''}">${montoMal ? '⚠️ inválido' : fmt(r.monto)}</td>
+      </tr>`;
+    }).join('')}</tbody>
+    </table></div>`;
+  btn.disabled = false;
+}
+function abrirModalImportarGastos(){
+  importGastosPreview = [];
+  document.getElementById('import-gastos-file').value = '';
+  renderPreviewImportarGastos();
+  document.getElementById('overlay-importar-gastos').classList.add('active');
+}
+async function confirmarImportacionGastos(){
+  const validas = importGastosPreview.filter(r=>r.concepto && r.monto!=null && r.fecha);
+  if(validas.length===0){ toast('No hay filas válidas para importar'); return; }
+  const btn = document.getElementById('import-gastos-btn-confirmar');
+  btn.disabled = true; btn.textContent = 'Importando…';
+  try{
+    const resp = await apiSend('/gastos/bulk', 'POST', {gastos: validas});
+    cerrarModal('overlay-importar-gastos');
+    renderGastos();
+    let msg = `${resp.importados} gasto(s) importado(s)`;
+    const omitidasTotal = importGastosPreview.length - validas.length + (resp.omitidos?.length||0);
+    if(omitidasTotal) msg += `, ${omitidasTotal} fila(s) omitida(s)`;
+    toast(msg);
+  }catch(e){ toast(e.message); }
+  btn.disabled = false; btn.textContent = 'Confirmar importación';
+}
+function descargarPlantillaGastos(){
+  const csv = 'fecha,concepto,categoria,monto\n2026-08-01,Alquiler local agosto,Alquiler,350000\n';
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'plantilla-gastos.csv';
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
 }

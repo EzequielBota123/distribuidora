@@ -84,6 +84,37 @@ router.put('/:id', async (req, res) => {
   res.json(data);
 });
 
+router.post('/bulk', async (req, res) => {
+  const { gastos } = req.body;
+  if (!Array.isArray(gastos) || gastos.length === 0) {
+    return res.status(400).json({ error: 'No se recibieron gastos para importar' });
+  }
+
+  const omitidos = [];
+  const filas = [];
+  gastos.forEach((g, i) => {
+    const concepto = (g.concepto && String(g.concepto).trim()) || '';
+    const monto = Number(g.monto);
+    if (!concepto) { omitidos.push({ fila: i + 1, motivo: 'Falta el concepto' }); return; }
+    if (!monto || monto <= 0) { omitidos.push({ fila: i + 1, motivo: 'Monto inválido' }); return; }
+    filas.push({
+      fecha: g.fecha || new Date().toISOString().slice(0, 10),
+      concepto,
+      categoria: (g.categoria && String(g.categoria).trim()) || 'General',
+      monto,
+      creado_por: req.user.id,
+    });
+  });
+
+  if (filas.length === 0) {
+    return res.status(400).json({ error: 'Ninguna fila tenía concepto y monto válidos', omitidos });
+  }
+
+  const { data, error } = await supabase.from('gastos').insert(filas).select();
+  if (error) return res.status(400).json({ error: error.message, omitidos });
+  res.status(201).json({ importados: data.length, omitidos });
+});
+
 router.delete('/', requireAdmin, async (req, res) => {
   const { error } = await supabase.from('gastos').delete().gte('id', 0);
   if (error) return res.status(400).json({ error: error.message });
