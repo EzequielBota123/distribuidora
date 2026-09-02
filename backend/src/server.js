@@ -16,6 +16,7 @@ import facturasRouter from './routes/facturas.js';
 import recordatoriosRouter from './routes/recordatorios.js';
 import dashboardRouter from './routes/dashboard.js';
 import reportesRouter from './routes/reportes.js';
+import gastosRouter from './routes/gastos.js';
 import { requireAuth } from './auth.js';
 
 dotenv.config();
@@ -42,6 +43,7 @@ app.use('/api/facturas', facturasRouter);
 app.use('/api/recordatorios', recordatoriosRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/reportes', reportesRouter);
+app.use('/api/gastos', gastosRouter);
 
 const frontendDir = path.join(__dirname, '..', '..', 'frontend');
 app.use(express.static(frontendDir));

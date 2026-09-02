@@ -13,6 +13,7 @@ import facturasRouter from '../backend/src/routes/facturas.js';
 import recordatoriosRouter from '../backend/src/routes/recordatorios.js';
 import dashboardRouter from '../backend/src/routes/dashboard.js';
 import reportesRouter from '../backend/src/routes/reportes.js';
+import gastosRouter from '../backend/src/routes/gastos.js';
 import { requireAuth } from '../backend/src/auth.js';
 
 const app = express();
@@ -35,6 +36,7 @@ app.use('/api/facturas', facturasRouter);
 app.use('/api/recordatorios', recordatoriosRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/reportes', reportesRouter);
+app.use('/api/gastos', gastosRouter);
 
 app.use((err, req, res, next) => {
   console.error(err);
