@@ -550,8 +550,8 @@
     <div class="kpi-row admin-only">
       <div class="kpi"><div class="kpi-label">Margen de stock ($)</div><div class="kpi-value" id="kpi-margen-stock-pesos">$0</div></div>
       <div class="kpi"><div class="kpi-label">Margen de stock (%)</div><div class="kpi-value" id="kpi-margen-stock-pct">0%</div></div>
-      <div class="kpi"><div class="kpi-label">Margen de ventas ($)</div><div class="kpi-value" id="kpi-margen-ventas-pesos">$0</div></div>
-      <div class="kpi"><div class="kpi-label">Margen de ventas (%)</div><div class="kpi-value" id="kpi-margen-ventas-pct">0%</div></div>
+      <div class="kpi"><div class="kpi-label">Margen de ventas del mes ($)</div><div class="kpi-value" id="kpi-margen-ventas-pesos">$0</div></div>
+      <div class="kpi"><div class="kpi-label">Margen de ventas del mes (%)</div><div class="kpi-value" id="kpi-margen-ventas-pct">0%</div></div>
     </div>
     <div class="panel">
       <div class="panel-head"><h3>Últimas ventas</h3></div>
@@ -628,7 +628,11 @@
         <button class="btn" onclick="abrirModalVenta()">+ Nueva venta</button>
       </div>
     </div>
-    <input class="searchbar" placeholder="Buscar por cliente, producto o estado..." oninput="renderVentas(this.value)">
+    <div class="topbar" style="margin-top:0;">
+      <input class="searchbar" style="flex:1;" placeholder="Buscar por cliente, producto o estado..." oninput="renderVentas(this.value)">
+      <div class="field" style="margin:0;max-width:220px;"><label>Filtrar por mes</label><input type="month" id="ventas-filtro-mes" onchange="renderVentas()"></div>
+      <button class="btn secondary small" onclick="document.getElementById('ventas-filtro-mes').value='';renderVentas();">Ver todos</button>
+    </div>
     <div class="panel" style="padding:0;overflow:auto;">
       <table><thead><tr><th>Fecha</th><th class="num">Días</th><th>Cliente</th><th>Ítems</th><th class="num">Total</th><th class="num admin-only-cell">Margen %</th><th>Vendedor</th><th class="num">Comisión (5%)</th><th>Estado</th><th>Remito</th><th>Cotización</th><th></th></tr></thead>
         <tbody id="tbl-ventas"></tbody></table>
@@ -723,14 +727,17 @@
     </div>
     <div class="panel" style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;">
       <div class="field" style="margin:0;">
-        <label>Descargar reporte de un mes (Excel)</label>
+        <label>Mes</label>
         <input type="month" id="rep-mes-excel">
       </div>
+      <button class="btn secondary" onclick="renderReportes(document.getElementById('rep-mes-excel').value)">👁 Ver ese mes</button>
+      <button class="btn secondary" onclick="renderReportes(null)">👁 Ver histórico completo</button>
       <button class="btn" onclick="exportarReporteExcel(document.getElementById('rep-mes-excel').value)">📥 Descargar Excel del mes</button>
       <button class="btn secondary" onclick="exportarReporteExcel(null)">📥 Descargar histórico completo</button>
     </div>
+    <p id="rep-periodo-actual" style="font-size:12px;color:var(--ink-soft);margin:-8px 0 4px;">Mostrando: histórico completo</p>
     <div class="kpi-row">
-      <div class="kpi"><div class="kpi-label">Ventas totales (histórico)</div><div class="kpi-value" id="rep-ventas-total">$0</div></div>
+      <div class="kpi"><div class="kpi-label">Ventas totales</div><div class="kpi-value" id="rep-ventas-total">$0</div></div>
       <div class="kpi"><div class="kpi-label">Costo de lo vendido</div><div class="kpi-value" id="rep-costo-total">$0</div></div>
       <div class="kpi"><div class="kpi-label">Margen bruto</div><div class="kpi-value" id="rep-margen">$0</div></div>
       <div class="kpi"><div class="kpi-label">Nº de ventas</div><div class="kpi-value" id="rep-nventas">0</div></div>
@@ -2257,6 +2264,8 @@ function renderVentas(filtro){
   const tbody = document.getElementById('tbl-ventas');
   if(VENTAS.length===0){ tbody.innerHTML = `<tr><td colspan="12" class="empty">Todavía no cargaste ventas.</td></tr>`; return; }
   let list = VENTAS;
+  const mesFiltro = document.getElementById('ventas-filtro-mes')?.value || '';
+  if(mesFiltro) list = list.filter(v=>v.fecha.slice(0,7)===mesFiltro);
   if(filtro){
     const f = filtro.trim().toLowerCase();
     list = list.filter(v=>
@@ -2267,7 +2276,7 @@ function renderVentas(filtro){
       v.venta_items.some(i=>i.producto_nombre.toLowerCase().includes(f))
     );
   }
-  if(list.length===0){ tbody.innerHTML = `<tr><td colspan="12" class="empty">No se encontraron ventas para "${filtro}".</td></tr>`; return; }
+  if(list.length===0){ tbody.innerHTML = `<tr><td colspan="12" class="empty">${mesFiltro ? 'Sin ventas en ese mes.' : `No se encontraron ventas para "${filtro}".`}</td></tr>`; return; }
   tbody.innerHTML = list.map(v=>{
     const rem = remitoDeVenta(v);
     const fac = facturaDeVenta(v);
@@ -2712,30 +2721,79 @@ async function renderDashboard(){
 }
 
 /* ---------- REPORTES ---------- */
-async function renderReportes(){
-  if(SESION.rol !== 'admin') return;
-  const inputMes = document.getElementById('rep-mes-excel');
-  if(inputMes && !inputMes.value) inputMes.value = hoy().slice(0,7);
-  let r;
-  try{ r = await apiGet('/reportes'); }catch(e){ toast(e.message); return; }
+const MEDALLAS_REPORTE = ['🥇','🥈','🥉'];
+function renderTablasReporte(ventasTotal, costoTotal, margen, nVentas, vendedores, top){
+  document.getElementById('rep-ventas-total').textContent = fmt(ventasTotal);
+  document.getElementById('rep-costo-total').textContent = fmt(costoTotal);
+  document.getElementById('rep-margen').textContent = fmt(margen);
+  document.getElementById('rep-nventas').textContent = nVentas;
 
-  document.getElementById('rep-ventas-total').textContent = fmt(r.ventasTotal);
-  document.getElementById('rep-costo-total').textContent = fmt(r.costoTotal);
-  document.getElementById('rep-margen').textContent = fmt(r.margen);
-  document.getElementById('rep-nventas').textContent = r.nVentas;
-
-  const MEDALLAS = ['🥇','🥈','🥉'];
   let puesto = 0;
-  document.getElementById('tbl-vendedores').innerHTML = r.vendedores.length ? r.vendedores.map(v=>{
+  document.getElementById('tbl-vendedores').innerHTML = vendedores.length ? vendedores.map(v=>{
     const esReal = v.vendedor !== 'Sin vendedor asignado';
     if(esReal) puesto++;
-    const puestoCelda = esReal ? (MEDALLAS[puesto-1] || `${puesto}°`) : '—';
+    const puestoCelda = esReal ? (MEDALLAS_REPORTE[puesto-1] || `${puesto}°`) : '—';
     return `<tr><td>${puestoCelda}</td><td>${v.vendedor}</td><td class="num">${v.nVentas}</td><td class="num">${fmt(v.total)}</td><td class="num">${v.comision>0?fmt(v.comision):'—'}</td></tr>`;
   }).join('')
     : `<tr><td colspan="5" class="empty">Sin datos de ventas todavía.</td></tr>`;
 
-  document.getElementById('tbl-top').innerHTML = r.top.length ? r.top.map(t=>`<tr><td>${t.nombre}</td><td class="num">${t.unidades}</td><td class="num">${fmt(t.facturado)}</td></tr>`).join('')
+  document.getElementById('tbl-top').innerHTML = top.length ? top.slice(0,10).map(t=>`<tr><td>${t.nombre}</td><td class="num">${t.unidades}</td><td class="num">${t.facturado!==undefined?fmt(t.facturado):'—'}</td></tr>`).join('')
     : `<tr><td colspan="3" class="empty">Sin datos de ventas todavía.</td></tr>`;
+}
+// Arma los mismos indicadores que devuelve el backend, pero recalculados en
+// el navegador a partir de VENTAS (ya trae venta_items, vendedor y márgenes
+// precalculados) — así se puede ver un mes puntual sin pegarle de nuevo al
+// servidor, igual que ya hace la descarga a Excel.
+function calcularReporteDesdeVentas(filtradas){
+  const ventasTotal = filtradas.reduce((s,v)=>s+Number(v.total),0);
+  const margen = filtradas.reduce((s,v)=>s+Number(v.margenPesos||0),0);
+  const costoTotal = ventasTotal - margen;
+
+  const porVendedor = {};
+  filtradas.forEach(v=>{
+    const nombre = v.vendedor || 'Sin vendedor asignado';
+    if(!porVendedor[nombre]) porVendedor[nombre] = { vendedor: nombre, nVentas: 0, total: 0, comision: 0 };
+    porVendedor[nombre].nVentas += 1;
+    porVendedor[nombre].total += Number(v.total);
+    if(v.vendedor) porVendedor[nombre].comision += Number(v.comision||0);
+  });
+  const vendedores = Object.values(porVendedor).sort((a,b)=>b.total-a.total);
+
+  const porProducto = {};
+  filtradas.forEach(v=>{
+    (v.venta_items||[]).forEach(it=>{
+      if(!porProducto[it.producto_nombre]) porProducto[it.producto_nombre] = { nombre: it.producto_nombre, unidades: 0, facturado: 0 };
+      porProducto[it.producto_nombre].unidades += Number(it.cantidad);
+      porProducto[it.producto_nombre].facturado += Number(it.cantidad)*Number(it.precio_unit);
+    });
+  });
+  const top = Object.values(porProducto).sort((a,b)=>b.unidades-a.unidades);
+
+  return { ventasTotal, costoTotal, margen, nVentas: filtradas.length, vendedores, top };
+}
+// mesVista: "YYYY-MM" para ver solo ese mes (calculado en el navegador),
+// null para forzar histórico completo, undefined (sin pasar nada, ej. al
+// entrar por el menú) también muestra histórico, pidiéndolo al backend.
+async function renderReportes(mesVista){
+  if(SESION.rol !== 'admin') return;
+  const inputMes = document.getElementById('rep-mes-excel');
+  if(inputMes && !inputMes.value) inputMes.value = hoy().slice(0,7);
+  const periodo = document.getElementById('rep-periodo-actual');
+
+  if(mesVista){
+    const filtradas = VENTAS.filter(v=>v.fecha.slice(0,7)===mesVista);
+    const r = calcularReporteDesdeVentas(filtradas);
+    renderTablasReporte(r.ventasTotal, r.costoTotal, r.margen, r.nVentas, r.vendedores, r.top);
+    const [anio,mesNum] = mesVista.split('-');
+    const nombreMes = new Date(anio,mesNum-1,1).toLocaleDateString('es-AR',{month:'long',year:'numeric'});
+    periodo.textContent = `Mostrando: ${nombreMes}`;
+    return;
+  }
+
+  periodo.textContent = 'Mostrando: histórico completo';
+  let r;
+  try{ r = await apiGet('/reportes'); }catch(e){ toast(e.message); return; }
+  renderTablasReporte(r.ventasTotal, r.costoTotal, r.margen, r.nVentas, r.vendedores, r.top);
 
   document.getElementById('tbl-mensual').innerHTML = r.mensual.length ? r.mensual.map(m=>`<tr><td>${m.mes}</td><td class="num">${m.n}</td><td class="num">${fmt(m.total)}</td></tr>`).join('')
     : `<tr><td colspan="3" class="empty">Sin datos de ventas todavía.</td></tr>`;

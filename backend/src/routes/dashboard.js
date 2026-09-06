@@ -20,12 +20,11 @@ router.get('/', async (req, res) => {
   const valorVenta = productos.reduce((s, p) => s + p.stock * p.precio, 0);
 
   const now = new Date();
-  const ventasMes = ventas
-    .filter((v) => {
-      const d = new Date(v.fecha);
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    })
-    .reduce((s, v) => s + Number(v.total), 0);
+  const ventasDelMes = ventas.filter((v) => {
+    const d = new Date(v.fecha);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  });
+  const ventasMes = ventasDelMes.reduce((s, v) => s + Number(v.total), 0);
 
   const stockBajo = productos.filter((p) => p.stock <= p.stock_min);
 
@@ -36,16 +35,17 @@ router.get('/', async (req, res) => {
     respuesta.margenStockPesos = valorVenta - valorCosto;
     respuesta.margenStockPct = valorVenta > 0 ? ((valorVenta - valorCosto) / valorVenta) * 100 : 0;
 
+    // Margen de ventas: del mes en curso, no histórico — así acompaña a
+    // "Ventas del mes" en vez de quedar pegado al volumen de meses viejos.
     const costoPorProducto = new Map(productos.map((p) => [p.id, Number(p.costo)]));
-    const ventasTotalHist = ventas.reduce((s, v) => s + Number(v.total), 0);
-    let costoVentasHist = 0;
-    for (const v of ventas) {
+    let costoVentasMes = 0;
+    for (const v of ventasDelMes) {
       for (const item of v.venta_items) {
-        costoVentasHist += (costoPorProducto.get(item.producto_id) || 0) * Number(item.cantidad);
+        costoVentasMes += (costoPorProducto.get(item.producto_id) || 0) * Number(item.cantidad);
       }
     }
-    respuesta.margenVentasPesos = ventasTotalHist - costoVentasHist;
-    respuesta.margenVentasPct = ventasTotalHist > 0 ? ((ventasTotalHist - costoVentasHist) / ventasTotalHist) * 100 : 0;
+    respuesta.margenVentasPesos = ventasMes - costoVentasMes;
+    respuesta.margenVentasPct = ventasMes > 0 ? ((ventasMes - costoVentasMes) / ventasMes) * 100 : 0;
   }
   res.json(respuesta);
 });
